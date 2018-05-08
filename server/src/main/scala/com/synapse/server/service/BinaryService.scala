@@ -1,31 +1,43 @@
 package com.synapse.server.service
 
-import java.io.File
+import java.util.Base64
 
-import com.synapse.manager.Manager
-import com.synapse.server.api.response.SearchBinariesResponse
+import akka.actor.{Actor, ActorLogging}
+import com.synapse.server.service.BinaryService.{FoundBinary, SearchBinaries, UploadBinary}
 
-trait BinaryService {
-  def manager: Manager[File]
-
-  def search(path: Option[String]): SearchBinariesResponse = convertStringMap(search(path, manager.list))
-
-  private def search(path: Option[String], container: Map[String, File]): Map[String, String] = path match {
-    case None => convertFileMap(container)
-    case Some(value) => convertFileMap(container).filter {
-      case (_, path) => path.contains(value)
-    }
+class BinaryService extends Actor with ActorLogging {
+  override def receive: Receive = {
+    case SearchBinaries(path) => sender ! (
+      path match {
+        case Some(path) =>
+          searchBinaries(path)
+        case None =>
+          searchBinaries
+      }
+    )
+    case UploadBinary(name, data) =>
+      uploadBinary(name, Base64.getDecoder.decode(data))
+    case _ => log.error("Invalid Message")
   }
 
-  private def convertFileMap(container: Map[String, File]): Map[String, String] = container.map {
-    case (key, file) =>
-      key -> file.getAbsolutePath
-  }
-
-  private def convertStringMap(container: Map[String, String]): SearchBinariesResponse = SearchBinariesResponse(
-    container.map {
-      case (key, path) =>
-        SearchBinariesResponse.BinaryDescription(key, path)
-    }.toList
+  private def searchBinaries(path: String): List[FoundBinary] = List(
+    FoundBinary("key1", "path1")
   )
+
+  private def searchBinaries(): List[FoundBinary] = List(
+    FoundBinary("key1", "path1"),
+    FoundBinary("key2", "path2")
+  )
+
+  private def uploadBinary(name: String, data: Array[Byte]): Unit = {
+
+  }
+}
+
+object BinaryService {
+  case class SearchBinaries(path: Option[String])
+
+  case class FoundBinary(key: String, path: String)
+
+  case class UploadBinary(name: String, data: String)
 }

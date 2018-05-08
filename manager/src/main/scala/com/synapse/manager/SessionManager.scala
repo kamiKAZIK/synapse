@@ -1,7 +1,7 @@
 package com.synapse.manager
 
-import com.synapse.api.Session
+import com.synapse.api.SynapseSession
 
-object SessionManager extends Manager[Session] {
+object SessionManager extends Manager[SynapseSession] {
   override def detach(key: String): Unit = detach(key, _.stop)
 }

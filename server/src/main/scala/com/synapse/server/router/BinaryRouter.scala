@@ -1,41 +1,39 @@
 package com.synapse.server.router
 
-import java.io.File
-
+import akka.actor.ActorRef
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import com.synapse.manager.Manager
+import akka.pattern.ask
+import com.synapse.server.api.request.UploadBinaryRequest
 import com.synapse.server.api.response.SearchBinariesResponse
+import com.synapse.server.router.binary.request._
+import com.synapse.server.router.binary.response._
+import com.synapse.server.service.BinaryService
+import de.heikoseeberger.akkahttpargonaut.ArgonautSupport._
 
-class BinaryRouter(private val manager: Manager[File]) extends Router {
+class BinaryRouter(private val service: ActorRef) extends Router {
   override def route: Route = path("binares") {
     get {
-      parameters('path.?) { pathParameter =>
+      parameters('path.?) { path =>
         complete {
-          val files = manager.list.map {
-            case (key, file) =>
-              key -> file.getAbsolutePath
-          }
-          val res = pathParameter match {
-            case None => files
-            case Some(value) => files.filter {
-              case (_, path) =>
-                path.contains(value)
-            }
-          }
-          SearchBinariesResponse(
-            res.map {
-              case (key, path) =>
-                SearchBinariesResponse.BinaryDescription(key, path)
-            }.toList
-          )
-          ""
+          (service ? BinaryService.SearchBinaries(path))
+            .mapTo[List[BinaryService.FoundBinary]]
+            .map(binaryList => SearchBinariesResponse(
+              binaryList.map(binary => SearchBinariesResponse.BinaryDescription(
+                binary.key,
+                binary.path
+              ))
+            ))
         }
       }
     }
   } ~ path("binary") {
     post {
-      complete("Binary Upload")
+      entity(as[UploadBinaryRequest]) { request =>
+        complete {
+          service ! BinaryService.UploadBinary(request.name, request.encodedBinary)
+        }
+      }
     }
   }
 }

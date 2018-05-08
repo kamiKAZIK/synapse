@@ -20,8 +20,7 @@ lazy val server = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-http" % "10.1.1",
-      "com.typesafe.akka" %% "akka-stream" % "2.5.11"
+      "de.heikoseeberger" %% "akka-http-argonaut" % "1.20.1"
     )
   ).dependsOn(manager, serverApi)
 

@@ -1,11 +1,12 @@
 package com.synapse.server
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
 import com.synapse.server.router.{BinaryRouter, JobRouter, Router, SessionRouter}
+import com.synapse.server.service.{BinaryService, JobService, SessionService}
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.io.StdIn
@@ -16,9 +17,17 @@ object SynapseServer {
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
+    val binaryService = system.actorOf(Props[BinaryService], "binaryService")
+    val sessionService = system.actorOf(Props[SessionService], "sessionService")
+    val jobService = system.actorOf(Props[JobService], "jobService")
+
     val (host, port) = ("localhost", 33000)
     val bindingFuture = Http().bindAndHandle(
-      router(BinaryRouter, SessionRouter, JobRouter),
+      router(
+        new BinaryRouter(binaryService),
+        new SessionRouter(sessionService),
+        new JobRouter()
+      ),
       host,
       port
     )
