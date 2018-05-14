@@ -28,5 +28,5 @@ class JobService extends Actor with ActorLogging {
 object JobService {
   case class SearchJobs(key: Option[String])
 
-  case class FoundJob(key: String)
+  case class FoundJob(name: String)
 }

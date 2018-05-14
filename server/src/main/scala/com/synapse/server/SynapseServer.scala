@@ -5,8 +5,9 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
-import com.synapse.server.router.{BinaryRouter, JobRouter, Router, SessionRouter}
+import com.synapse.server.routing.{BinaryRouter, JobRouter, Router, SessionRouter}
 import com.synapse.server.service.{BinaryService, JobService, SessionService}
+import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.io.StdIn
@@ -17,6 +18,8 @@ object SynapseServer {
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
+    val config = ConfigFactory.load()
+
     val binaryService = system.actorOf(Props[BinaryService], "binaryService")
     val sessionService = system.actorOf(Props[SessionService], "sessionService")
     val jobService = system.actorOf(Props[JobService], "jobService")
@@ -26,7 +29,7 @@ object SynapseServer {
       router(
         new BinaryRouter(binaryService),
         new SessionRouter(sessionService),
-        new JobRouter()
+        new JobRouter(jobService)
       ),
       host,
       port
@@ -40,5 +43,7 @@ object SynapseServer {
       .onComplete(_ => system.terminate())
   }
 
-  private def router(routers: Router*): Route = routers.reduceLeft(_.route ~ _.route)
+  private def router(routers: Router*): Route = routers
+    .map(_.route)
+    .reduceLeft(_ ~ _)
 }

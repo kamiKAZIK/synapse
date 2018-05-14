@@ -29,5 +29,5 @@ class SessionService extends Actor with ActorLogging {
 object SessionService {
   case class SearchSessions(key: Option[String])
 
-  case class FoundSession(key: String)
+  case class FoundSession(name: String)
 }

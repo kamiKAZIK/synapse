@@ -1,4 +1,4 @@
-package com.synapse.server.router
+package com.synapse.server.routing
 
 import akka.http.scaladsl.server.Route
 

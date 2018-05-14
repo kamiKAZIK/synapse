@@ -1,5 +1,5 @@
 package com.synapse.api
 
-trait Job[JobInput, JobOutput] {
-  def execute(session: SynapseSession, input: JobInput): JobOutput
+trait Job[In, Out] {
+  def execute(session: Session, input: In): Out
 }

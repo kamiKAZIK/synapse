@@ -1,7 +1,7 @@
 package com.synapse.manager
 
-import com.synapse.api.SynapseSession
+import com.synapse.api.Session
 
 trait SynapseSessionFactory {
-  def create(): SynapseSession
+  def create(): Session
 }

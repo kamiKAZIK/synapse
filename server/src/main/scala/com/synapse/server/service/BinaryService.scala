@@ -7,10 +7,10 @@ import com.synapse.server.service.BinaryService.{FoundBinary, SearchBinaries, Up
 
 class BinaryService extends Actor with ActorLogging {
   override def receive: Receive = {
-    case SearchBinaries(path) => sender ! (
-      path match {
-        case Some(path) =>
-          searchBinaries(path)
+    case SearchBinaries(name) => sender ! (
+      name match {
+        case Some(name) =>
+          searchBinaries(name)
         case None =>
           searchBinaries
       }
@@ -35,9 +35,9 @@ class BinaryService extends Actor with ActorLogging {
 }
 
 object BinaryService {
-  case class SearchBinaries(path: Option[String])
+  case class SearchBinaries(name: Option[String])
 
-  case class FoundBinary(key: String, path: String)
+  case class FoundBinary(name: String, path: String)
 
   case class UploadBinary(name: String, data: String)
 }
