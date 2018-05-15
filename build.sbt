@@ -1,16 +1,10 @@
 lazy val commonSettings = Seq(
   organization := "com.synapse",
-  scalaVersion := sys.env.getOrElse("SCALA_VERSION", "2.11.12")
+  scalaVersion := sys.env.getOrElse("SCALA_VERSION", "2.12.6")
 )
 
 lazy val api = project
   .settings(commonSettings)
-  .settings(
-    libraryDependencies ++= Seq(
-      "org.apache.spark" %% "spark-sql" % "2.3.0",
-      "org.apache.spark" %% "spark-streaming" % "2.3.0"
-    )
-  )
 
 lazy val manager = project
   .settings(commonSettings)

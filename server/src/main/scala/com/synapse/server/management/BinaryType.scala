@@ -16,8 +16,10 @@ object BinaryType {
   }
 
   def fromString(binaryType: String): BinaryType = binaryType match {
-    case "jar" => Jar
-    case "egg" => Egg
+    case Jar.extension => Jar
+    case Egg.extension => Egg
     case _ => throw new InvalidParameterException(s"Binary type '$binaryType' is not supported.")
   }
+
+  def supportedTypes: List[String] = List(Jar.extension, Egg.extension)
 }
