@@ -20,14 +20,14 @@ object SynapseServer {
 
     val config = ConfigFactory.load()
 
-    val binaryService = system.actorOf(Props[BinaryService], "binaryService")
-    val sessionService = system.actorOf(Props[SessionService], "sessionService")
-    val jobService = system.actorOf(Props[JobService], "jobService")
+    val binaryService = system.actorOf(Props[BinaryService], "binary-service")
+    val sessionService = system.actorOf(Props[SessionService], "session-service")
+    val jobService = system.actorOf(Props[JobService], "jobs-service")
 
     val (host, port) = ("localhost", 33000)
     val bindingFuture = Http().bindAndHandle(
       router(
-        new BinaryRouter(binaryService),
+        new BinaryRouter(binaryService, config),
         new SessionRouter(sessionService),
         new JobRouter(jobService)
       ),

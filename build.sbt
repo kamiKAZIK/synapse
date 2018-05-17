@@ -1,10 +1,15 @@
 lazy val commonSettings = Seq(
   organization := "com.synapse",
-  scalaVersion := sys.env.getOrElse("SCALA_VERSION", "2.12.6")
+  scalaVersion := sys.env.getOrElse("SCALA_VERSION", "2.11.12")
 )
 
 lazy val api = project
   .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.apache.spark" %% "spark-sql" % "2.3.0"
+    )
+  )
 
 lazy val manager = project
   .settings(commonSettings)
@@ -24,7 +29,7 @@ lazy val server = project
 
       "com.h2database" % "h2" % "1.4.197"
     )
-  ).dependsOn(serverApi)
+  ).dependsOn(api)
 
 lazy val serverApi = project
   .in(file("server-api"))

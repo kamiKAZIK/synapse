@@ -2,7 +2,7 @@ package com.synapse.server.management
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.nio.file.{Files, Path, StandardCopyOption}
-import java.util.Comparator
+import java.util.{Base64, Comparator}
 
 import com.typesafe.scalalogging.Logger
 
@@ -13,16 +13,16 @@ class BinaryFileCache(directory: Path) {
     Files.createDirectories(directory)
   }
 
-  def retrieve(name: String, hash: String, binaryType: BinaryType): Option[Path] =
-    Some(directory.resolve(name).resolve(fileName(name, hash, binaryType)))
+  def retrieve(name: String, hash: Array[Byte], binaryType: BinaryType): Option[Path] =
+    Some(directory.resolve(name).resolve(fileName(name, encode(hash), binaryType)))
       .filter(Files.exists(_))
 
-  def cache(name: String, hash: String, binaryType: BinaryType, content: Array[Byte]): Path = {
+  def cache(name: String, hash: Array[Byte], binaryType: BinaryType, content: Array[Byte]): Path = {
     val cachedPath = directory.resolve(name)
     if (!Files.exists(cachedPath)) {
       Files.createDirectories(cachedPath)
     }
-    val binaryName = fileName(name, hash, binaryType)
+    val binaryName = fileName(name, encode(hash), binaryType)
     val temporaryFile = File.createTempFile(binaryName, ".tmp", cachedPath.toFile)
     val temporaryFilePath = temporaryFile.toPath
     val output = new BufferedOutputStream(new FileOutputStream(temporaryFile))
@@ -61,4 +61,6 @@ class BinaryFileCache(directory: Path) {
 
   private[this] def fileName(name: String, hash: String, binaryType: BinaryType): String =
     s"$name-$hash.${binaryType.extension}"
+
+  private[this] def encode(hash: Array[Byte]): String = Base64.getEncoder.encodeToString(hash)
 }

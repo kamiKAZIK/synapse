@@ -1,48 +1,97 @@
 package com.synapse.server.persistence.dao
 
+import com.synapse.server.management.BinaryType
 import com.synapse.server.persistence.entity.{Binary, BinaryContent}
-import slick.lifted.TableQuery
 import slick.jdbc.H2Profile.api._
-import java.security.MessageDigest
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class BinaryDao(database: Database) {
-  /*def searchBinaries(name: Option[String]) =
-    database.run(
-      name match {
-        case Some(name) =>
-          query.filter(_.name like name).result
+  def findBinary(name: String, extension: String): Future[Option[Binary]] = database.run(
+    Binary.query
+      .filter(_.name === name)
+      .filter(_.extension === extension)
+      .result
+      .headOption
+      .map(o => o.map {
+        case (i, n, e) =>
+          Binary(i, n, BinaryType.fromString(e))
+      })
+  )
+
+  def saveBinary(binaryContent: BinaryContent): Future[Int] = database.run(
+    BinaryContent.query
+      .filter(_.binaryId === binaryContent.binaryId)
+      .filter(_.hash === binaryContent.hash)
+      .result
+      .headOption
+      .flatMap {
         case None =>
-          query.result
-      }
-    ).map {
-      case (name, extension, content) =>
-        Binary(name, extension, content)
-  }*/
+          BinaryContent.query += (binaryContent.hash, binaryContent.binaryId, binaryContent.uploaded, binaryContent.binary)
+        case Some(_) =>
+          DBIO.failed(new IllegalArgumentException("Exact same version of binary is already stored"))
+      }.transactionally
+  )
 
-  def saveBinary(binary: Binary, binaryContent: BinaryContent) = {
-    database.run(
-      Binary.query.filter(_.name === binary.name)
-        .filter(_.extension === binary.extension)
-        .filter(_.hash === binary.hash).result.headOption.flatMap {
-          case None =>
-            Binary.query.insertOrUpdate(binary.name, binary.extension, binary.hash)
-              .andThen(BinaryContent.query += (binaryContent.hash, binaryContent.uploaded, binaryContent.binary))
-          case Some(_) =>
-            DBIO.failed(new RuntimeException("Nothing done."))
-        }.transactionally
-    )
-  }
+  def findLatest(name: String, extension: String): Future[Option[(String, String, Array[Byte])]] = database.run(
+    Binary.query
+      .filter(_.name === name)
+      .filter(_.extension === extension)
+      .flatMap(b => BinaryContent.query
+        .sortBy(_.uploaded.desc)
+        .filter(_.binaryId === b.id)
+        .map(bc => (b.name, b.extension, bc.content))
+      )
+      .result
+      .headOption
+  )
 
+  def saveBinary(binary: Binary, binaryContent: BinaryContent): Future[Int] = database.run(
+    (Binary.query += (binary.id, binary.name, binary.binaryType.extension))
+      .andThen(
+        BinaryContent.query
+          .filter(_.binaryId === binary.id)
+          .filter(_.hash === binaryContent.hash)
+          .result
+          .headOption
+          .flatMap {
+            case None =>
+              BinaryContent.query += (binaryContent.hash, binaryContent.binaryId, binaryContent.uploaded, binaryContent.binary)
+            case Some(_) =>
+              DBIO.failed(new IllegalArgumentException("Exact same version of binary is already stored"))
+          }
+      )
+      .transactionally
+  )
 
-  def deleteBinary(name: String) =
-    database.run(Binary.query.filter(_.name === name).delete)
+  def deleteBinary(name: String, extension: String): Future[Int] = database.run(
+    Binary.query
+      .filter(_.name === name)
+      .filter(_.extension === extension)
+      .delete
+      .transactionally
+  )
 
-  def revertBinary(name: String) = {
-    BinaryContent.query.join(Binary.query.filter(_.name === name)).on(_.hash === _.hash)
-  }
-
-  private def hash(bytes: Array[Byte]) =
-    MessageDigest.getInstance("SHA-256").digest(bytes)
+  def revertBinary(name: String, extension: String): Future[Int] = database.run(
+    Binary.query
+      .filter(_.name === name)
+      .filter(_.extension === extension)
+      .flatMap(b => BinaryContent.query
+        .sortBy(_.uploaded.desc)
+        .filter(_.binaryId === b.id)
+      )
+      .result
+      .headOption
+      .flatMap {
+        case Some((hash, binaryId, _, _)) =>
+          BinaryContent.query
+            .filter(_.hash === hash)
+            .filter(_.binaryId === binaryId)
+            .delete
+        case None =>
+          DBIO.failed(new IllegalArgumentException("No binaries found to revert"))
+      }.transactionally
+  )
 }
+
